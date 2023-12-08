@@ -16,7 +16,9 @@
 #include <boost/beast.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/asio/coroutine.hpp>
-#include <boost/json/parser.hpp>
+#include <boost/json/parse.hpp>
+#include <boost/json/value.hpp>
+#include <boost/json.hpp>
 #include <iostream>
 
 namespace asio = boost::asio;
@@ -73,8 +75,21 @@ private:
     {
       str += part;
     }
-    cout << str << endl;
-
+    try
+    {
+      // Criando um objeto JSON a partir da string
+      nlohmann::json j = nlohmann::json::parse(str);
+      cout << j["user"]
+           << endl;
+      // Exibindo o JSON
+      std::cout
+          << "Objeto JSON criado a partir da string:\n";
+      // std::cout << j.dump(4) << std::endl; // Saída formatada do JSON
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
+    }
     nlohmann::json responseData = {
         {"bitMapVector", {1, 2, 3}}, // Substitua pelos seus dados reais
         {"user", 5},
