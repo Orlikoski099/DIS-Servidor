@@ -1,10 +1,8 @@
 #include <iostream>
-#include <libwebsockets.h>
 #include <Eigen/Dense>
 #include <thread>
 #include <mutex>
-#include <windows.h>
-#include <winsock2.h>
+#include <chrono>
 #include "CGNE.hpp"
 #include "CGNR.hpp"
 #include "matrix.hpp"
@@ -60,16 +58,6 @@ private:
 
   void processRequest()
   {
-    // Obtém o valor do campo 'user' da solicitação
-    // TA ERRADO, ACHAR COMO PEGAR E SALVAR NO REQUEST
-    // auto jsonBody = nlohmann::json::parse(request_.body());
-
-    // for (auto it = jsonBody.begin(); it != jsonBody.end(); it++)
-    // {
-    //   cout << it.key() << endl;
-    // }
-    // long userValue = request_.body()[1];
-    // Cria um objeto JSON com os dados desejados
     string str;
     for (const auto &part : request_.body())
     {
@@ -96,72 +84,70 @@ private:
       }
       Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
 
-      std::cout << valoresDouble.size()
-                << "Objeto JSON criado a partir da string:\n";
-      // std::cout << j.dump(4) << std::endl; // Saída formatada do JSON
+      std::cout << valoresDouble.size();
       ModlMat h1;
       if (j["model"] == false)
       {
         nlohmann::json responseData;
-        h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
-        ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
-        auto [f, i] = cgne.solve();
+        h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
+        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+        auto [f, i] = cgnr.solve();
         cout << "iterações" << i << endl;
-        ImageGeneration::makeImage(f, j["user"]);
-        // responseData["bitMapVector"] = f;
-        // responseData["iteracao"] = i;
-        // responseData["user"] = j["user"];
-        // responseData["time"] = 0;
-        // std::string responseBody = responseData.dump();
+        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+        responseData["bitMapVector"] = f;
+        responseData["iteracao"] = i;
+        responseData["user"] = j["user"];
+        responseData["time"] = 0;
+        std::string responseBody = responseData.dump();
 
-        // response_.version(request_.version());
-        // response_.keep_alive(false);
+        response_.version(request_.version());
+        response_.keep_alive(false);
 
-        // // Habilita o CORS para todas as origens
-        // response_.set(http::field::access_control_allow_origin, "*");
-        // response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        // response_.set(http::field::access_control_allow_headers, "content-type");
+        // Habilita o CORS para todas as origens
+        response_.set(http::field::access_control_allow_origin, "*");
+        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        response_.set(http::field::access_control_allow_headers, "content-type");
 
-        // response_.result(http::status::ok);
+        response_.result(http::status::ok);
 
-        // // Configura o corpo da resposta com a string JSON
-        // response_.body() = responseBody;
+        // Configura o corpo da resposta com a string JSON
+        response_.body() = responseBody;
 
-        // response_.prepare_payload();
+        response_.prepare_payload();
 
-        // writeResponse();
+        writeResponse();
       }
       else
       {
         nlohmann::json responseData;
-        h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
-        ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
-        auto [f, i] = cgne.solve();
+        h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
+        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+        auto [f, i] = cgnr.solve();
         cout << "iterações" << i << endl;
         ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-        // ImageGeneration::makeImage(f, j["user"]);
-        // responseData["bitMapVector"] = f;
-        // responseData["iteracao"] = i;
-        // responseData["user"] = j["user"];
-        // responseData["time"] = 0;
-        // std::string responseBody = responseData.dump();
+        ImageGeneration::makeImage(f, j["user"]);
+        responseData["bitMapVector"] = f;
+        responseData["iteracao"] = i;
+        responseData["user"] = j["user"];
+        responseData["time"] = 0;
+        std::string responseBody = responseData.dump();
 
-        // response_.version(request_.version());
-        // response_.keep_alive(false);
+        response_.version(request_.version());
+        response_.keep_alive(false);
 
-        // // Habilita o CORS para todas as origens
-        // response_.set(http::field::access_control_allow_origin, "*");
-        // response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        // response_.set(http::field::access_control_allow_headers, "content-type");
+        // Habilita o CORS para todas as origens
+        response_.set(http::field::access_control_allow_origin, "*");
+        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        response_.set(http::field::access_control_allow_headers, "content-type");
 
-        // response_.result(http::status::ok);
+        response_.result(http::status::ok);
 
-        // // Configura o corpo da resposta com a string JSON
-        // response_.body() = responseBody;
+        // Configura o corpo da resposta com a string JSON
+        response_.body() = responseBody;
 
-        // response_.prepare_payload();
+        response_.prepare_payload();
 
-        // writeResponse();
+        writeResponse();
       }
     }
     catch (const std::exception &e)
@@ -195,8 +181,7 @@ private:
     writeResponse();
   }
 
-  void
-  writeResponse()
+  void writeResponse()
   {
     auto self = shared_from_this();
     http::async_write(stream_, response_,
