@@ -79,10 +79,6 @@ private:
     {
       // Criando um objeto JSON a partir da string
       nlohmann::json j = nlohmann::json::parse(str);
-      cout << j["user"]
-           << endl;
-      cout << j["ganho"] << endl;
-      cout << j["model"] << endl;
       std::vector<string> valores = j["vector"].get<std::vector<string>>();
 
       // Convertendo o std::vector para Eigen::VectorXd
@@ -100,11 +96,39 @@ private:
         }
       }
       Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
-      
 
-      std::cout
-          << "Objeto JSON criado a partir da string:\n";
+      std::cout << eigenVector
+                << "Objeto JSON criado a partir da string:\n";
       // std::cout << j.dump(4) << std::endl; // Saída formatada do JSON
+      ModlMat h1;
+      if (j["model"] == false)
+      {
+        nlohmann::json responseData;
+        h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
+        ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
+        auto [f, i] = cgne.solve();
+        responseData["bitMapVector"] = f;
+        responseData["iteracao"] = i;
+        responseData["user"] = j["user"];
+        std::string responseBody = responseData.dump();
+
+        response_.version(request_.version());
+        response_.keep_alive(false);
+
+        // Habilita o CORS para todas as origens
+        response_.set(http::field::access_control_allow_origin, "*");
+        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        response_.set(http::field::access_control_allow_headers, "content-type");
+
+        response_.result(http::status::ok);
+
+        // Configura o corpo da resposta com a string JSON
+        response_.body() = responseBody;
+
+        response_.prepare_payload();
+
+        writeResponse();
+      }
     }
     catch (const std::exception &e)
     {
