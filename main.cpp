@@ -80,7 +80,6 @@ private:
       // Criando um objeto JSON a partir da string
       nlohmann::json j = nlohmann::json::parse(str);
       std::vector<string> valores = j["vector"].get<std::vector<string>>();
-
       // Convertendo o std::vector para Eigen::VectorXd
       vector<double> valoresDouble;
       for (const auto &valString : valores)
@@ -107,28 +106,30 @@ private:
         h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
         ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
         auto [f, i] = cgne.solve();
-        responseData["bitMapVector"] = f;
-        responseData["iteracao"] = i;
-        responseData["user"] = j["user"];
-        responseData["time"] = 0;
-        std::string responseBody = responseData.dump();
+        cout << "iterações" << i << endl;
+        ImageGeneration::makeImage(f, j["user"]);
+        // responseData["bitMapVector"] = f;
+        // responseData["iteracao"] = i;
+        // responseData["user"] = j["user"];
+        // responseData["time"] = 0;
+        // std::string responseBody = responseData.dump();
 
-        response_.version(request_.version());
-        response_.keep_alive(false);
+        // response_.version(request_.version());
+        // response_.keep_alive(false);
 
-        // Habilita o CORS para todas as origens
-        response_.set(http::field::access_control_allow_origin, "*");
-        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        response_.set(http::field::access_control_allow_headers, "content-type");
+        // // Habilita o CORS para todas as origens
+        // response_.set(http::field::access_control_allow_origin, "*");
+        // response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        // response_.set(http::field::access_control_allow_headers, "content-type");
 
-        response_.result(http::status::ok);
+        // response_.result(http::status::ok);
 
-        // Configura o corpo da resposta com a string JSON
-        response_.body() = responseBody;
+        // // Configura o corpo da resposta com a string JSON
+        // response_.body() = responseBody;
 
-        response_.prepare_payload();
+        // response_.prepare_payload();
 
-        writeResponse();
+        // writeResponse();
       }
       else
       {
@@ -136,28 +137,31 @@ private:
         h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
         ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
         auto [f, i] = cgne.solve();
-        responseData["bitMapVector"] = f;
-        responseData["iteracao"] = i;
-        responseData["user"] = j["user"];
-        responseData["time"] = 0;
-        std::string responseBody = responseData.dump();
+        cout << "iterações" << i << endl;
+        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+        // ImageGeneration::makeImage(f, j["user"]);
+        // responseData["bitMapVector"] = f;
+        // responseData["iteracao"] = i;
+        // responseData["user"] = j["user"];
+        // responseData["time"] = 0;
+        // std::string responseBody = responseData.dump();
 
-        response_.version(request_.version());
-        response_.keep_alive(false);
+        // response_.version(request_.version());
+        // response_.keep_alive(false);
 
-        // Habilita o CORS para todas as origens
-        response_.set(http::field::access_control_allow_origin, "*");
-        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        response_.set(http::field::access_control_allow_headers, "content-type");
+        // // Habilita o CORS para todas as origens
+        // response_.set(http::field::access_control_allow_origin, "*");
+        // response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        // response_.set(http::field::access_control_allow_headers, "content-type");
 
-        response_.result(http::status::ok);
+        // response_.result(http::status::ok);
 
-        // Configura o corpo da resposta com a string JSON
-        response_.body() = responseBody;
+        // // Configura o corpo da resposta com a string JSON
+        // response_.body() = responseBody;
 
-        response_.prepare_payload();
+        // response_.prepare_payload();
 
-        writeResponse();
+        // writeResponse();
       }
     }
     catch (const std::exception &e)
