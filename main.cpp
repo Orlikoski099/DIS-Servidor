@@ -97,7 +97,7 @@ private:
       }
       Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
 
-      std::cout << eigenVector
+      std::cout << valoresDouble.size()
                 << "Objeto JSON criado a partir da string:\n";
       // std::cout << j.dump(4) << std::endl; // Saída formatada do JSON
       ModlMat h1;
@@ -110,6 +110,36 @@ private:
         responseData["bitMapVector"] = f;
         responseData["iteracao"] = i;
         responseData["user"] = j["user"];
+        responseData["time"] = 0;
+        std::string responseBody = responseData.dump();
+
+        response_.version(request_.version());
+        response_.keep_alive(false);
+
+        // Habilita o CORS para todas as origens
+        response_.set(http::field::access_control_allow_origin, "*");
+        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+        response_.set(http::field::access_control_allow_headers, "content-type");
+
+        response_.result(http::status::ok);
+
+        // Configura o corpo da resposta com a string JSON
+        response_.body() = responseBody;
+
+        response_.prepare_payload();
+
+        writeResponse();
+      }
+      else
+      {
+        nlohmann::json responseData;
+        h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
+        ConjugateGradientNE cgne(*h1.getMat(), eigenVector);
+        auto [f, i] = cgne.solve();
+        responseData["bitMapVector"] = f;
+        responseData["iteracao"] = i;
+        responseData["user"] = j["user"];
+        responseData["time"] = 0;
         std::string responseBody = responseData.dump();
 
         response_.version(request_.version());
@@ -161,7 +191,8 @@ private:
     writeResponse();
   }
 
-  void writeResponse()
+  void
+  writeResponse()
   {
     auto self = shared_from_this();
     http::async_write(stream_, response_,
