@@ -74,7 +74,7 @@ private:
       str += part;
     }
     cout << str << endl;
-    nlohmann::json json = nlohmann::json::parse(str);
+
     nlohmann::json responseData = {
         {"bitMapVector", {1, 2, 3}}, // Substitua pelos seus dados reais
         {"user", 5},
