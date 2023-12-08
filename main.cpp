@@ -81,7 +81,27 @@ private:
       nlohmann::json j = nlohmann::json::parse(str);
       cout << j["user"]
            << endl;
-      // Exibindo o JSON
+      cout << j["ganho"] << endl;
+      cout << j["model"] << endl;
+      std::vector<string> valores = j["vector"].get<std::vector<string>>();
+
+      // Convertendo o std::vector para Eigen::VectorXd
+      vector<double> valoresDouble;
+      for (const auto &valString : valores)
+      {
+        try
+        {
+          double valDouble = std::stod(valString);
+          valoresDouble.push_back(valDouble);
+        }
+        catch (const std::exception &e)
+        {
+          std::cerr << "Erro ao converter a string para double: " << e.what() << std::endl;
+        }
+      }
+      Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
+      
+
       std::cout
           << "Objeto JSON criado a partir da string:\n";
       // std::cout << j.dump(4) << std::endl; // Saída formatada do JSON
