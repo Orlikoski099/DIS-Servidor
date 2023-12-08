@@ -58,127 +58,145 @@ private:
 
   void processRequest()
   {
-    string str;
-    for (const auto &part : request_.body())
+    auto self = shared_from_this(); // Obtendo uma referência a partir de shared_ptr
+
+    std::string target(self->request_.target().data(), self->request_.target().size());
+
+    if (target.find("/image/") != std::string::npos)
     {
-      str += part;
+      // Lógica para lidar com o endpoint '/image'
+      std::string id = target.substr(target.find_last_of("/") + 1); // Obtendo o ID da imagem a partir da URL
+
+      // Lógica para acessar a imagem com base no ID (substitua com seu próprio código)
+      std::string imagePath = "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\Imagens" + id + ".png";
+      // Envie a imagem como resposta
+      // ...
     }
-    try
+    else
     {
-      // Criando um objeto JSON a partir da string
-      nlohmann::json j = nlohmann::json::parse(str);
-      std::vector<string> valores = j["vector"].get<std::vector<string>>();
-      // Convertendo o std::vector para Eigen::VectorXd
-      vector<double> valoresDouble;
-      for (const auto &valString : valores)
+      // Restante do código permanece igual para outros endpoints/processamento
+      string str;
+      for (const auto &part : request_.body())
       {
-        try
+        str += part;
+      }
+      try
+      {
+        // Criando um objeto JSON a partir da string
+        nlohmann::json j = nlohmann::json::parse(str);
+        std::vector<string> valores = j["vector"].get<std::vector<string>>();
+        // Convertendo o std::vector para Eigen::VectorXd
+        vector<double> valoresDouble;
+        for (const auto &valString : valores)
         {
-          double valDouble = std::stod(valString);
-          valoresDouble.push_back(valDouble);
+          try
+          {
+            double valDouble = std::stod(valString);
+            valoresDouble.push_back(valDouble);
+          }
+          catch (const std::exception &e)
+          {
+            std::cerr << "Erro ao converter a string para double: " << e.what() << std::endl;
+          }
         }
-        catch (const std::exception &e)
+        Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
+
+        std::cout << valoresDouble.size();
+        ModlMat h1;
+        if (j["model"] == false)
         {
-          std::cerr << "Erro ao converter a string para double: " << e.what() << std::endl;
+          nlohmann::json responseData;
+          h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
+          ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+          auto [f, i] = cgnr.solve();
+          cout << "iterações" << i << endl;
+          ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+          responseData["bitMapVector"] = {1, 2, 3, 4};
+          responseData["iteracao"] = i;
+          responseData["user"] = j["user"];
+          responseData["time"] = 0;
+          std::string responseBody = responseData.dump();
+
+          response_.version(request_.version());
+          response_.keep_alive(false);
+
+          // Habilita o CORS para todas as origens
+          response_.set(http::field::access_control_allow_origin, "*");
+          response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+          response_.set(http::field::access_control_allow_headers, "content-type");
+
+          response_.result(http::status::ok);
+
+          // Configura o corpo da resposta com a string JSON
+          response_.body() = responseBody;
+
+          response_.prepare_payload();
+
+          writeResponse();
+        }
+        else
+        {
+          nlohmann::json responseData;
+          h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
+          ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+          auto [f, i] = cgnr.solve();
+          cout << "iterações" << i << endl;
+          ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+          ImageGeneration::makeImage(f, j["user"]);
+          responseData["bitMapVector"] = {1, 2, 3, 4};
+          responseData["iteracao"] = i;
+          responseData["user"] = j["user"];
+          responseData["time"] = 0;
+          std::string responseBody = responseData.dump();
+
+          response_.version(request_.version());
+          response_.keep_alive(false);
+
+          // Habilita o CORS para todas as origens
+          response_.set(http::field::access_control_allow_origin, "*");
+          response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+          response_.set(http::field::access_control_allow_headers, "content-type");
+
+          response_.result(http::status::ok);
+
+          // Configura o corpo da resposta com a string JSON
+          response_.body() = responseBody;
+
+          response_.prepare_payload();
+
+          writeResponse();
         }
       }
-      Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
-
-      std::cout << valoresDouble.size();
-      ModlMat h1;
-      if (j["model"] == false)
+      catch (const std::exception &e)
       {
-        nlohmann::json responseData;
-        h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
-        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
-        auto [f, i] = cgnr.solve();
-        cout << "iterações" << i << endl;
-        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-        responseData["bitMapVector"] = f;
-        responseData["iteracao"] = i;
-        responseData["user"] = j["user"];
-        responseData["time"] = 0;
-        std::string responseBody = responseData.dump();
-
-        response_.version(request_.version());
-        response_.keep_alive(false);
-
-        // Habilita o CORS para todas as origens
-        response_.set(http::field::access_control_allow_origin, "*");
-        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        response_.set(http::field::access_control_allow_headers, "content-type");
-
-        response_.result(http::status::ok);
-
-        // Configura o corpo da resposta com a string JSON
-        response_.body() = responseBody;
-
-        response_.prepare_payload();
-
-        writeResponse();
+        std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
       }
-      else
-      {
-        nlohmann::json responseData;
-        h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
-        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
-        auto [f, i] = cgnr.solve();
-        cout << "iterações" << i << endl;
-        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-        ImageGeneration::makeImage(f, j["user"]);
-        responseData["bitMapVector"] = f;
-        responseData["iteracao"] = i;
-        responseData["user"] = j["user"];
-        responseData["time"] = 0;
-        std::string responseBody = responseData.dump();
+      nlohmann::json responseData = {
+          {"bitMapVector", {1, 2, 3}}, // Substitua pelos seus dados reais
+          {"user", 5},
+          {"iteracoes", 10},
+          {"tempo", 5.0}};
 
-        response_.version(request_.version());
-        response_.keep_alive(false);
+      // Converte o objeto JSON para uma string
+      std::string responseBody = responseData.dump();
 
-        // Habilita o CORS para todas as origens
-        response_.set(http::field::access_control_allow_origin, "*");
-        response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-        response_.set(http::field::access_control_allow_headers, "content-type");
+      response_.version(request_.version());
+      response_.keep_alive(false);
 
-        response_.result(http::status::ok);
+      // Habilita o CORS para todas as origens
+      response_.set(http::field::access_control_allow_origin, "*");
+      response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
+      response_.set(http::field::access_control_allow_headers, "content-type");
 
-        // Configura o corpo da resposta com a string JSON
-        response_.body() = responseBody;
+      response_.result(http::status::ok);
 
-        response_.prepare_payload();
+      // Configura o corpo da resposta com a string JSON
+      response_.body() = responseBody;
 
-        writeResponse();
-      }
+      response_.prepare_payload();
+
+      writeResponse();
     }
-    catch (const std::exception &e)
-    {
-      std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
-    }
-    nlohmann::json responseData = {
-        {"bitMapVector", {1, 2, 3}}, // Substitua pelos seus dados reais
-        {"user", 5},
-        {"iteracoes", 10},
-        {"tempo", 5.0}};
-
-    // Converte o objeto JSON para uma string
-    std::string responseBody = responseData.dump();
-
-    response_.version(request_.version());
-    response_.keep_alive(false);
-
-    // Habilita o CORS para todas as origens
-    response_.set(http::field::access_control_allow_origin, "*");
-    response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-    response_.set(http::field::access_control_allow_headers, "content-type");
-
-    response_.result(http::status::ok);
-
-    // Configura o corpo da resposta com a string JSON
-    response_.body() = responseBody;
-
-    response_.prepare_payload();
-
-    writeResponse();
   }
 
   void writeResponse()
