@@ -58,23 +58,18 @@ private:
 
   void processRequest()
   {
-    auto self = shared_from_this(); // Obtendo uma referência a partir de shared_ptr
+    auto self = shared_from_this();
 
     std::string target(self->request_.target().data(), self->request_.target().size());
 
     if (target.find("/image/") != std::string::npos)
     {
-      // Lógica para lidar com o endpoint '/image'
-      std::string id = target.substr(target.find_last_of("/") + 1); // Obtendo o ID da imagem a partir da URL
+      std::string id = target.substr(target.find_last_of("/") + 1);
 
-      // Lógica para acessar a imagem com base no ID (substitua com seu próprio código)
       std::string imagePath = "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\Imagens" + id + ".png";
-      // Envie a imagem como resposta
-      // ...
     }
     else
     {
-      // Restante do código permanece igual para outros endpoints/processamento
       string str;
       for (const auto &part : request_.body())
       {
@@ -82,10 +77,8 @@ private:
       }
       try
       {
-        // Criando um objeto JSON a partir da string
         nlohmann::json j = nlohmann::json::parse(str);
         std::vector<string> valores = j["vector"].get<std::vector<string>>();
-        // Convertendo o std::vector para Eigen::VectorXd
         vector<double> valoresDouble;
         for (const auto &valString : valores)
         {
@@ -105,6 +98,19 @@ private:
         ModlMat h1;
         if (j["model"] == false)
         {
+          if (j["ganho"] == 0)
+          {
+            const int N = 64;
+            const int S = 436;
+            for (int c = 0; c < S; ++c)
+            {
+              for (int l = 0; l < N; ++l)
+              {
+                double gamma = 100 + (1.0 / 20) * l * sqrt(static_cast<double>(l));
+                eigenVector[l * c] *= gamma;
+              }
+            }
+          }
           nlohmann::json responseData;
           h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
           ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
@@ -120,14 +126,12 @@ private:
           response_.version(request_.version());
           response_.keep_alive(false);
 
-          // Habilita o CORS para todas as origens
           response_.set(http::field::access_control_allow_origin, "*");
           response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
           response_.set(http::field::access_control_allow_headers, "content-type");
 
           response_.result(http::status::ok);
 
-          // Configura o corpo da resposta com a string JSON
           response_.body() = responseBody;
 
           response_.prepare_payload();
@@ -152,14 +156,12 @@ private:
           response_.version(request_.version());
           response_.keep_alive(false);
 
-          // Habilita o CORS para todas as origens
           response_.set(http::field::access_control_allow_origin, "*");
           response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
           response_.set(http::field::access_control_allow_headers, "content-type");
 
           response_.result(http::status::ok);
 
-          // Configura o corpo da resposta com a string JSON
           response_.body() = responseBody;
 
           response_.prepare_payload();
@@ -172,25 +174,22 @@ private:
         std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
       }
       nlohmann::json responseData = {
-          {"bitMapVector", {1, 2, 3}}, // Substitua pelos seus dados reais
+          {"bitMapVector", {1, 2, 3}},
           {"user", 5},
           {"iteracoes", 10},
           {"tempo", 5.0}};
 
-      // Converte o objeto JSON para uma string
       std::string responseBody = responseData.dump();
 
       response_.version(request_.version());
       response_.keep_alive(false);
 
-      // Habilita o CORS para todas as origens
       response_.set(http::field::access_control_allow_origin, "*");
       response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
       response_.set(http::field::access_control_allow_headers, "content-type");
 
       response_.result(http::status::ok);
 
-      // Configura o corpo da resposta com a string JSON
       response_.body() = responseBody;
 
       response_.prepare_payload();
