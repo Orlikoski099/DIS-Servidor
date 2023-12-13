@@ -1,8 +1,11 @@
 #include <iostream>
 #include <Eigen/Dense>
-#include <thread>
+#include <future>
 #include <mutex>
 #include <chrono>
+#include <winsock2.h>
+#include <windows.h>
+#include <pdh.h>
 #include "CGNE.hpp"
 #include "CGNR.hpp"
 #include "matrix.hpp"
@@ -17,11 +20,47 @@
 #include <boost/json/parse.hpp>
 #include <boost/json/value.hpp>
 #include <boost/json.hpp>
-#include <iostream>
 
 namespace asio = boost::asio;
 namespace http = boost::beast::http;
 
+double GetCPULoad()
+{
+  PDH_HQUERY query;
+  PDH_HCOUNTER counter;
+  PDH_FMT_COUNTERVALUE value;
+
+  PdhOpenQuery(nullptr, 0, &query);
+  PdhAddCounter(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
+  PdhCollectQueryData(query);
+  PdhCollectQueryData(query);
+  PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
+
+  PdhCloseQuery(query);
+
+  return value.doubleValue;
+}
+
+// Função para obter o uso da RAM
+MEMORYSTATUSEX GetRAMUsage()
+{
+  MEMORYSTATUSEX memInfo;
+  memInfo.dwLength = sizeof(memInfo);
+  GlobalMemoryStatusEx(&memInfo);
+  return memInfo;
+}
+
+void MonitorCPU()
+{
+  while (true)
+  {
+    double cpuUsage = GetCPULoad();
+    std::cout << "CPU Usage: " << cpuUsage << "%" << std::endl;
+    MEMORYSTATUSEX ramUsage = GetRAMUsage();
+    std::cout << "RAM Used: " << (ramUsage.ullTotalPhys - ramUsage.ullAvailPhys) / (1024 * 1024) << " MB" << std::endl;
+    Sleep(10000);
+  }
+}
 class Session : public std::enable_shared_from_this<Session>
 {
 public:
@@ -66,6 +105,7 @@ private:
 
   void processRequest()
   {
+    // std::future<void> cpuRamThread = std::async(std::launch::async, MonitorCPU);
     if (requests_queue_.empty())
     {
       return;
@@ -78,75 +118,71 @@ private:
     std::string target(self->request_.target().data(), self->request_.target().size());
     std::string responseBody;
 
-    if (target.find("/image/") != std::string::npos)
+    auto start = std::chrono::steady_clock::now();
+    string str;
+    for (const auto &part : request_.body())
     {
-      std::string id = target.substr(target.find_last_of("/") + 1);
-
-      std::string imagePath = "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\Imagens" + id + ".png";
+      str += part;
     }
-    else
+    try
     {
-      string str;
-      for (const auto &part : request_.body())
+      nlohmann::json j = nlohmann::json::parse(str);
+      std::vector<string> valores = j["vector"].get<std::vector<string>>();
+      vector<double> valoresDouble;
+      for (const auto &valString : valores)
       {
-        str += part;
-      }
-      try
-      {
-        nlohmann::json j = nlohmann::json::parse(str);
-        std::vector<string> valores = j["vector"].get<std::vector<string>>();
-        vector<double> valoresDouble;
-        for (const auto &valString : valores)
+        try
         {
           double valDouble = std::stod(valString);
           valoresDouble.push_back(valDouble);
         }
-        Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
+        catch (const std::exception &e)
+        {
+          std::cerr << "Erro ao converter a string para double: " << e.what() << std::endl;
+        }
+      }
+      Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
 
-        ModlMat h1;
-        int ant = 2;
-        if (j["model"] == false && ant != 0)
-        {
-          h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
-          ant = 0;
-        }
-        else
-        {
-          h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
-          ant = 1;
-        }
-        if (j["ganho"] == 1)
-        {
-          const int N = 64;
-          int S = 436;
-          if (j["model"] == 1)
-          {
-            S = 794;
-          }
-          for (int c = 0; c < S; ++c)
-          {
-            for (int l = 0; l < N; ++l)
-            {
-              double gamma = 100 + (1.0 / 20) * l * sqrt(static_cast<double>(l));
-              eigenVector[l * c] *= gamma;
-            }
-          }
-        }
-        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
-        auto [f, i] = cgnr.solve();
-        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-        nlohmann::json responseData = {
-            {"bitMapVector", ImageGeneration::ImgVector(f)},
-            {"user", j["user"]},
-            {"iteracoes", i},
-            {"tempo", 5.0}};
-        responseBody = responseData.dump();
-      }
-      catch (const std::exception &e)
+      ModlMat h1;
+      if (j["model"] == false)
       {
-        std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
+        h1.loadMat(*h1.getMat(), "utils\\MatrizesRef\\H-2.csv");
       }
-      processRequest();
+      else
+      {
+        h1.loadMat(*h1.getMat(), "utils\\MatrizesRef\\H-1.csv");
+      }
+      if (j["ganho"] == true)
+      {
+        const int N = 64;
+        int S = 436;
+        if (j["model"] == 1)
+        {
+          S = 794;
+        }
+        for (int c = 0; c < S; ++c)
+        {
+          for (int l = 0; l < N; ++l)
+          {
+            double gamma = 100 + (1.0 / 20) * l * sqrt(static_cast<double>(l));
+            eigenVector[l * c] *= gamma;
+          }
+        }
+      }
+      ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+      auto [f, i] = cgnr.solve();
+      ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+      auto end = std::chrono::steady_clock::now();
+      nlohmann::json responseData = {
+          {"bitMapVector", ImageGeneration::ImgVector(f)},
+          {"user", j["user"]},
+          {"iteracoes", i},
+          {"tempo", 5.0}};
+      responseBody = responseData.dump();
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
     }
 
     response_.version(request_.version());
@@ -163,10 +199,10 @@ private:
     response_.prepare_payload();
 
     writeResponse();
+    processRequest();
   }
 
-  void
-  writeResponse()
+  void writeResponse()
   {
     auto self = shared_from_this();
     http::async_write(stream_, response_,
