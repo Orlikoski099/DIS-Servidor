@@ -13,7 +13,7 @@ std::pair<VectorXd, int> ConjugateGradientNE::solve()
   double best_error = std::numeric_limits<double>::max();
   double r_old_norm = r.norm();
 
-  for (i = 0; i < f.size(); i++)
+  for (i = 0; i < 100; i++)
   {
     double alpha_num = r.transpose() * r;
     double alpha_den = p.transpose() * p;

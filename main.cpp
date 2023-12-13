@@ -29,7 +29,14 @@ public:
       : stream_(std::move(socket))
   {
   }
-
+  void enqueueRequest(http::request<http::string_body> request)
+  {
+    requests_queue_.push(request);
+    if (requests_queue_.size() == 1)
+    {
+      processRequest();
+    }
+  }
   void start()
   {
     readRequest();
@@ -53,20 +60,29 @@ private:
       std::cerr << "Error reading request: " << ec.message() << std::endl;
       return;
     }
-    processRequest();
+    auto self = shared_from_this();
+    self->enqueueRequest(request_);
   }
 
   void processRequest()
   {
+    if (requests_queue_.empty())
+    {
+      return;
+    }
+    http::request<http::string_body> current_request = requests_queue_.front();
+    requests_queue_.pop();
+
     auto self = shared_from_this();
 
     std::string target(self->request_.target().data(), self->request_.target().size());
+    std::string responseBody;
 
     if (target.find("/image/") != std::string::npos)
     {
       std::string id = target.substr(target.find_last_of("/") + 1);
 
-      std::string imagePath = "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\Imagens" + id + ".png";
+      std::string imagePath = "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\Imagens" + id + ".png";
     }
     else
     {
@@ -82,123 +98,75 @@ private:
         vector<double> valoresDouble;
         for (const auto &valString : valores)
         {
-          try
-          {
-            double valDouble = std::stod(valString);
-            valoresDouble.push_back(valDouble);
-          }
-          catch (const std::exception &e)
-          {
-            std::cerr << "Erro ao converter a string para double: " << e.what() << std::endl;
-          }
+          double valDouble = std::stod(valString);
+          valoresDouble.push_back(valDouble);
         }
         Eigen::Map<Eigen::VectorXd> eigenVector(valoresDouble.data(), valoresDouble.size());
 
-        std::cout << valoresDouble.size();
         ModlMat h1;
-        if (j["model"] == false)
+        int ant = 2;
+        if (j["model"] == false && ant != 0)
         {
-          if (j["ganho"] == 0)
-          {
-            const int N = 64;
-            const int S = 436;
-            for (int c = 0; c < S; ++c)
-            {
-              for (int l = 0; l < N; ++l)
-              {
-                double gamma = 100 + (1.0 / 20) * l * sqrt(static_cast<double>(l));
-                eigenVector[l * c] *= gamma;
-              }
-            }
-          }
-          nlohmann::json responseData;
-          h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
-          ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
-          auto [f, i] = cgnr.solve();
-          cout << "iterações" << i << endl;
-          ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-          responseData["bitMapVector"] = {1, 2, 3, 4};
-          responseData["iteracao"] = i;
-          responseData["user"] = j["user"];
-          responseData["time"] = 0;
-          std::string responseBody = responseData.dump();
-
-          response_.version(request_.version());
-          response_.keep_alive(false);
-
-          response_.set(http::field::access_control_allow_origin, "*");
-          response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-          response_.set(http::field::access_control_allow_headers, "content-type");
-
-          response_.result(http::status::ok);
-
-          response_.body() = responseBody;
-
-          response_.prepare_payload();
-
-          writeResponse();
+          h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-2.csv");
+          ant = 0;
         }
         else
         {
-          nlohmann::json responseData;
-          h1.loadMat(*h1.getMat(), "C:\\Users\\saulo\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
-          ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
-          auto [f, i] = cgnr.solve();
-          cout << "iterações" << i << endl;
-          ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
-          ImageGeneration::makeImage(f, j["user"]);
-          responseData["bitMapVector"] = {1, 2, 3, 4};
-          responseData["iteracao"] = i;
-          responseData["user"] = j["user"];
-          responseData["time"] = 0;
-          std::string responseBody = responseData.dump();
-
-          response_.version(request_.version());
-          response_.keep_alive(false);
-
-          response_.set(http::field::access_control_allow_origin, "*");
-          response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-          response_.set(http::field::access_control_allow_headers, "content-type");
-
-          response_.result(http::status::ok);
-
-          response_.body() = responseBody;
-
-          response_.prepare_payload();
-
-          writeResponse();
+          h1.loadMat(*h1.getMat(), "C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\utils\\MatrizesRef\\H-1.csv");
+          ant = 1;
         }
+        if (j["ganho"] == 1)
+        {
+          const int N = 64;
+          int S = 436;
+          if (j["model"] == 1)
+          {
+            S = 794;
+          }
+          for (int c = 0; c < S; ++c)
+          {
+            for (int l = 0; l < N; ++l)
+            {
+              double gamma = 100 + (1.0 / 20) * l * sqrt(static_cast<double>(l));
+              eigenVector[l * c] *= gamma;
+            }
+          }
+        }
+        ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
+        auto [f, i] = cgnr.solve();
+        ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
+        nlohmann::json responseData = {
+            {"bitMapVector", ImageGeneration::ImgVector(f)},
+            {"user", j["user"]},
+            {"iteracoes", i},
+            {"tempo", 5.0}};
+        responseBody = responseData.dump();
       }
       catch (const std::exception &e)
       {
         std::cerr << "Erro ao analisar a string JSON: " << e.what() << std::endl;
       }
-      nlohmann::json responseData = {
-          {"bitMapVector", {1, 2, 3}},
-          {"user", 5},
-          {"iteracoes", 10},
-          {"tempo", 5.0}};
-
-      std::string responseBody = responseData.dump();
-
-      response_.version(request_.version());
-      response_.keep_alive(false);
-
-      response_.set(http::field::access_control_allow_origin, "*");
-      response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE");
-      response_.set(http::field::access_control_allow_headers, "content-type");
-
-      response_.result(http::status::ok);
-
-      response_.body() = responseBody;
-
-      response_.prepare_payload();
-
-      writeResponse();
+      processRequest();
     }
+
+    response_.version(request_.version());
+    response_.keep_alive(false);
+
+    response_.set(http::field::access_control_allow_origin, "*");
+    response_.set(http::field::access_control_allow_methods, "GET, POST, OPTIONS, PUT, DELETE, FETCH");
+    response_.set(http::field::access_control_allow_headers, "content-type");
+
+    response_.result(http::status::ok);
+
+    response_.body() = std::move(responseBody);
+
+    response_.prepare_payload();
+
+    writeResponse();
   }
 
-  void writeResponse()
+  void
+  writeResponse()
   {
     auto self = shared_from_this();
     http::async_write(stream_, response_,
@@ -225,6 +193,7 @@ private:
   asio::ip::tcp::socket stream_;
   http::request<http::string_body> request_;
   http::response<http::string_body> response_;
+  std::queue<http::request<http::string_body>> requests_queue_;
 };
 
 class Server

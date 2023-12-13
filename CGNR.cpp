@@ -20,7 +20,7 @@ std::pair<Eigen::VectorXd, unsigned int> ConjugateGradienteNR::solve()
   double best_error = std::numeric_limits<double>::max();
   double r_old_norm = r.norm();
 
-  for (i = 0; i < f.size(); i++)
+  for (i = 0; i < 250; i++)
   {
     auto w = H * p;
     double z_norm = std::pow(z.norm(), 2);
