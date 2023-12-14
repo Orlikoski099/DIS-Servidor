@@ -42,6 +42,8 @@ void Session::onRead(boost::system::error_code ec, std::size_t bytes_transferred
 
 void Session::processRequest()
 {
+  clock_t start, end;
+  start = clock() / CLOCKS_PER_SEC;
   if (requests_queue_.empty())
   {
     return;
@@ -53,8 +55,6 @@ void Session::processRequest()
 
   std::string target(self->request_.target().data(), self->request_.target().size());
   std::string responseBody;
-
-  auto start = std::chrono::steady_clock::now();
   string str;
   for (const auto &part : request_.body())
   {
@@ -108,17 +108,13 @@ void Session::processRequest()
     ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
     auto [f, i] = cgnr.solve();
     makeImage(f, std::to_string(j["user"].get<int>()));
-    auto end = std::chrono::steady_clock::now();
-    std::chrono::duration<double> start_seg = start.time_since_epoch();
-    std::chrono::duration<double> end_seg = end.time_since_epoch();
-    double start = start_seg.count();
-    double endtime = end_seg.count();
+    end = clock() / CLOCKS_PER_SEC;
     nlohmann::json responseData = {
         {"imageVector", ImgVector(f)},
         {"user", j["user"]},
         {"iteracoes", i},
         {"startTime", start},
-        {"endTime", endtime}};
+        {"endTime", end}};
     responseBody = responseData.dump();
   }
   catch (const std::exception &e)

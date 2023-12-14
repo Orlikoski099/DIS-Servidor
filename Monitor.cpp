@@ -1,8 +1,10 @@
 // Monitor.cpp
 #include "Monitor.hpp"
 
-void Monitor::MonitorCPU() {
-    while (true) {
+void Monitor::MonitorCPU()
+{
+    while (true)
+    {
         double cpuUsage = GetCPULoad();
         std::cout << "CPU Usage: " << cpuUsage << "%" << std::endl;
 
@@ -10,11 +12,12 @@ void Monitor::MonitorCPU() {
         std::cout << "RAM Used: " << (ramUsage.ullTotalPhys - ramUsage.ullAvailPhys) / (1024 * 1024) << " MB"
                   << std::endl;
 
-        std::this_thread::sleep_for(std::chrono::seconds(10));
+        std::chrono::seconds(10);
     }
 }
 
-double Monitor::GetCPULoad() {
+double Monitor::GetCPULoad()
+{
     PDH_HQUERY query;
     PDH_HCOUNTER counter;
     PDH_FMT_COUNTERVALUE value;
@@ -29,7 +32,8 @@ double Monitor::GetCPULoad() {
     return value.doubleValue;
 }
 
-MEMORYSTATUSEX Monitor::GetRAMUsage() {
+MEMORYSTATUSEX Monitor::GetRAMUsage()
+{
     MEMORYSTATUSEX memInfo;
     memInfo.dwLength = sizeof(memInfo);
     GlobalMemoryStatusEx(&memInfo);

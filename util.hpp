@@ -3,6 +3,7 @@
 #include <Eigen/Dense>
 #include <mutex>
 #include <chrono>
+#include <ctime>
 #include <winsock2.h>
 #include <windows.h>
 #include <pdh.h>
