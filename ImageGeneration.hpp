@@ -6,7 +6,7 @@
 
 namespace ImageGeneration
 {
-  std::vector<unsigned int> ImgVector(VectorXd &f)
+  inline std::vector<unsigned int> ImgVector(VectorXd &f)
   {
     std::vector<unsigned int> pixelValues;
     if (sqrt(f.size()) == 60)
@@ -41,7 +41,7 @@ namespace ImageGeneration
     return pixelValues;
   }
 
-  void makeImage(VectorXd &f, string filename)
+  inline void makeImage(VectorXd &f, string filename)
   {
     if (sqrt(f.size()) == 60)
     {

@@ -1,5 +1,4 @@
 #pragma once
-#include <Eigen/Dense>
 #include <fstream>
 #include <sstream>
 #include "util.hpp"

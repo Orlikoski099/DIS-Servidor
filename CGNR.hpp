@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <Eigen/Dense>
 #include "util.hpp"
 
 using namespace Eigen;
