@@ -42,7 +42,6 @@ void Session::onRead(boost::system::error_code ec, std::size_t bytes_transferred
 
 void Session::processRequest()
 {
-  // std::future<void> cpuRamThread = std::async(std::launch::async, MonitorCPU);
   if (requests_queue_.empty())
   {
     return;
@@ -89,7 +88,7 @@ void Session::processRequest()
     {
       h1.loadMat(*h1.getMat(), "utils\\MatrizesRef\\H-1.csv");
     }
-    if (j["ganho"] == 1)
+    if (j["ganho"] == true)
     {
       const int N = 64;
       int S = 436;
@@ -108,7 +107,6 @@ void Session::processRequest()
     }
     ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
     auto [f, i] = cgnr.solve();
-    cout << i << endl;
     makeImage(f, std::to_string(j["user"].get<int>()));
     auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> start_seg = start.time_since_epoch();
@@ -121,8 +119,6 @@ void Session::processRequest()
         {"iteracoes", i},
         {"startTime", start},
         {"endTime", endtime}};
-    cout << j["user"] << endl;
-    cout << responseData["imageVector"] << endl;
     responseBody = responseData.dump();
   }
   catch (const std::exception &e)

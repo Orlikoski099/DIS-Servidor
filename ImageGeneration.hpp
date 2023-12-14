@@ -6,9 +6,9 @@
 
 namespace ImageGeneration
 {
-  inline std::vector<unsigned int> ImgVector(VectorXd &f)
+  inline std::vector<unsigned short int> ImgVector(VectorXd &f)
   {
-    std::vector<unsigned int> pixelValues;
+    std::vector<unsigned short int> pixelValues;
     if (sqrt(f.size()) == 60)
     {
 
@@ -19,8 +19,7 @@ namespace ImageGeneration
         for (int x = 0; x < 60; ++x)
         {
 
-          image.at<uchar>(x, y) = static_cast<uchar>(std::abs(f[y * 60 + x]) * 255.0);
-          pixelValues.push_back(static_cast<int>(image.at<uchar>(y, x)));
+          pixelValues.push_back(std::abs(f[x * 60 + y]) * 255.0);
         }
       }
     }
@@ -33,8 +32,7 @@ namespace ImageGeneration
         for (int x = 0; x < 30; ++x)
         {
 
-          image.at<uchar>(x, y) = static_cast<uchar>(std::abs(f[y * 30 + x]) * 255.0);
-          pixelValues.push_back(static_cast<int>(image.at<uchar>(y, x)));
+          pixelValues.push_back(std::abs(f[x * 30 + y]) * 255.0);
         }
       }
     }

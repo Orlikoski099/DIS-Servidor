@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <Eigen/Dense>
-#include <future>
 #include <mutex>
 #include <chrono>
 #include <winsock2.h>

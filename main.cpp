@@ -1,20 +1,25 @@
 #include "server.hpp"
+#include "Monitor.hpp"
 
 double GetCPULoad()
 {
-  PDH_HQUERY query;
-  PDH_HCOUNTER counter;
-  PDH_FMT_COUNTERVALUE value;
+  PDH_HQUERY cpuQuery;
+  PDH_HCOUNTER cpuTotal;
 
-  PdhOpenQuery(nullptr, 0, &query);
-  PdhAddCounter(query, "\\Processor(_Total)\\% Processor Time", 0, &counter);
-  PdhCollectQueryData(query);
-  PdhCollectQueryData(query);
-  PdhGetFormattedCounterValue(counter, PDH_FMT_DOUBLE, NULL, &value);
+  PdhOpenQuery(nullptr, NULL, &cpuQuery);
+  PdhAddCounter(cpuQuery, "\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
+  PdhCollectQueryData(cpuQuery);
+  Sleep(10000);
+  PdhCollectQueryData(cpuQuery);
 
-  PdhCloseQuery(query);
+  PDH_FMT_COUNTERVALUE counterVal;
+  PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
 
-  return value.doubleValue;
+  std::cout << "Carga da CPU: " << counterVal.doubleValue << "%" << std::endl;
+
+  PdhCloseQuery(cpuQuery);
+
+  return 0;
 }
 
 // Função para obter o uso da RAM
