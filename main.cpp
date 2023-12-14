@@ -152,7 +152,7 @@ private:
       {
         h1.loadMat(*h1.getMat(), "utils\\MatrizesRef\\H-1.csv");
       }
-      if (j["ganho"] == true)
+      if (j["ganho"] == 1)
       {
         const int N = 64;
         int S = 436;
@@ -171,6 +171,7 @@ private:
       }
       ConjugateGradienteNR cgnr(*h1.getMat(), eigenVector);
       auto [f, i] = cgnr.solve();
+      cout << i << endl;
       ImageGeneration::makeImage(f, std::to_string(j["user"].get<int>()));
       auto end = std::chrono::steady_clock::now();
       nlohmann::json responseData = {
@@ -178,6 +179,7 @@ private:
           {"user", j["user"]},
           {"iteracoes", i},
           {"tempo", 5.0}};
+      cout << j["user"] << endl;
       responseBody = responseData.dump();
     }
     catch (const std::exception &e)
@@ -199,7 +201,6 @@ private:
     response_.prepare_payload();
 
     writeResponse();
-    processRequest();
   }
 
   void writeResponse()
@@ -221,7 +222,9 @@ private:
     }
 
     // Close the connection
-    stream_.shutdown(asio::ip::tcp::socket::shutdown_send);
+    if (requests_queue_.empty())
+      stream_.shutdown(asio::ip::tcp::socket::shutdown_send);
+    processRequest();
   }
 
 private:
