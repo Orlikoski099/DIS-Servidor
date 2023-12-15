@@ -54,7 +54,7 @@ namespace ImageGeneration
           image.at<uchar>(x, y) = static_cast<uchar>(std::abs(f[y * 60 + x]) * 255.0);
         }
       }
-      cv::imwrite("C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\imagens\\" + filename + ".png", image);
+      cv::imwrite("imagens\\" + filename + ".png", image);
     }
 
     else
@@ -69,7 +69,7 @@ namespace ImageGeneration
           image.at<uchar>(x, y) = static_cast<uchar>(std::abs(f[y * 30 + x]) * 255.0);
         }
       }
-      cv::imwrite("C:\\Users\\Cetaphil\\Desktop\\ultrassom\\DIS-Servidor\\imagens\\" + filename + ".png", image);
+      cv::imwrite("imagens\\" + filename + ".png", image);
     }
   }
 }
